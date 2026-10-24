@@ -1,45 +1,39 @@
-#ifndef COMMAND_H
-#define COMMAND_H
 
-#include <string>
-#include <vector>
-#include <sys/types.h>
+#ifndef command_h
+#define command_h
 
-using namespace std;
+struct SimpleCommand
+{
+	int _numberOfAvailableArguments;
+	int _numberOfArguments;
+	char **_arguments;
 
-// Represents one simple command, such as:
-// ls -l
-// echo Hello
-// grep main file.txt
-
-struct SimpleCommand {
-    vector<string> _arguments;
-
-    void insertArgument(const string& argument);
+	SimpleCommand();
+	void insertArgument(char *argument);
 };
 
-// Represents a complete shell command.
-// It can contain one simple command or multiple commands connected by pipes.
+struct Command
+{
+	int _numberOfAvailableSimpleCommands;
+	int _numberOfSimpleCommands;
+	SimpleCommand **_simpleCommands;
+	char *_outFile;
+	char *_inputFile;
+	char *_errFile;
+	int  _out_error;
+	int _background;
+	int _append;
 
-struct Command {
-    vector<SimpleCommand*> _simpleCommands;
+	void prompt();
+	void print();
+	void execute();
+	void clear();
 
-    string* _outFile;
-    string* _inputFile;
-    string* _errFile;
+	Command();
+	void insertSimpleCommand(SimpleCommand *simpleCommand);
 
-    bool _append;
-    bool _background;
-
-    Command();
-
-    void insertSimpleCommand(SimpleCommand* simpleCommand);
-
-    void clear();
-
-    void parse();
-
-    void execute();
+	static Command _currentCommand;
+	static SimpleCommand *_currentSimpleCommand;
 };
 
 #endif

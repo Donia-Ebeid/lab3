@@ -1,114 +1,66 @@
 #include "tokenizer.h"
+#include <sstream>
+#include <iostream>
 
-#include <cctype>
-#include <stdexcept>
-#include <string>
-#include <vector>
+std::vector<Token> tokenize(const std::string &input)
+{
+    std::vector<Token> tokens;
+    std::istringstream stream(input);
+    std::string word;
 
-vector<string> Tokenizer::tokenize(const string& input) {
-    vector<string> tokens;
-    string current;
+    while (stream >> word)
+    {
+        Token token;
 
-    char quote = '\0';
-    bool tokenStarted = false;
+        if (word == "|")
+            token.type = TOKEN_PIPE;
+        else if (word == ">")
+            token.type = TOKEN_REDIRECT;
+        else if (word == ">>")
+            token.type = TOKEN_APPEND;
+        else if (word == "<")
+            token.type = TOKEN_INPUT;
+        else if (word == "&")
+            token.type = TOKEN_BACKGROUND;
+        else if (word == "2>")
+            token.type = TOKEN_ERROR;
+        else if (word == ">>&")
+            token.type = TOKEN_REDIRECT_AND_ERROR;
+        else
+            {
+                if (!tokens.empty())
+                {
+                    Token &prev = tokens.back();
+                    if (prev.type == TOKEN_REDIRECT ||
+                        prev.type == TOKEN_APPEND ||
+                        prev.type == TOKEN_INPUT ||
+                        prev.type == TOKEN_ERROR || 
+                        prev.type == TOKEN_REDIRECT_AND_ERROR ||
+                        prev.type == TOKEN_COMMAND || 
+                        prev.type == TOKEN_ARGUMENT || 
+                        word[0] == '-' ||
+                        word.find('/') != std::string::npos ||
+                        word.find('.') != std::string::npos
 
-    for (size_t i = 0; i < input.size(); ++i) {
-        char c = input[i];
-
-        // Handle characters inside quoted text.
-        if (quote != '\0') {
-            if (c == quote) {
-                quote = '\0';
-            } else {
-                current += c;
+                    )
+                    {
+                        token.type = TOKEN_ARGUMENT;
+                    }
+                    else
+                    {
+                        token.type = TOKEN_COMMAND;
+                    }
+                }
+                else
+                {
+                    token.type = TOKEN_COMMAND;
+                }
             }
 
-            continue;
-        }
-
-        // Start a quoted section.
-        if (c == '"' || c == '\'') {
-            quote = c;
-            tokenStarted = true;
-            continue;
-        }
-
-        // Finish a token at whitespace.
-        if (isspace(static_cast<unsigned char>(c))) {
-            if (tokenStarted) {
-                tokens.push_back(current);
-                current.clear();
-                tokenStarted = false;
-            }
-
-            continue;
-        }
-
-        // Recognize combined output and error redirection.
-        if (input.compare(i, 3, ">>&") == 0) {
-            if (tokenStarted) {
-                tokens.push_back(current);
-                current.clear();
-                tokenStarted = false;
-            }
-
-            tokens.push_back(">>&");
-            i += 2;
-            continue;
-        }
-
-        // Recognize error redirection.
-        if (input.compare(i, 2, "2>") == 0) {
-            if (tokenStarted) {
-                tokens.push_back(current);
-                current.clear();
-                tokenStarted = false;
-            }
-
-            tokens.push_back("2>");
-            ++i;
-            continue;
-        }
-
-        // Recognize append redirection.
-        if (input.compare(i, 2, ">>") == 0) {
-            if (tokenStarted) {
-                tokens.push_back(current);
-                current.clear();
-                tokenStarted = false;
-            }
-
-            tokens.push_back(">>");
-            ++i;
-            continue;
-        }
-
-        // Recognize individual shell operators.
-        if (c == '|' || c == '<' || c == '>' || c == '&') {
-            if (tokenStarted) {
-                tokens.push_back(current);
-                current.clear();
-                tokenStarted = false;
-            }
-
-            tokens.push_back(string(1, c));
-            continue;
-        }
-
-        // Add ordinary characters to the current token.
-        current += c;
-        tokenStarted = true;
+        token.value = word;
+        tokens.push_back(token);
     }
 
-    // Reject input containing an unmatched quote.
-    if (quote != '\0') {
-        throw invalid_argument("unmatched quotation mark");
-    }
-
-    // Save the final token, including an empty quoted argument.
-    if (tokenStarted) {
-        tokens.push_back(current);
-    }
-
+    tokens.push_back({TOKEN_EOF, ""});
     return tokens;
 }
